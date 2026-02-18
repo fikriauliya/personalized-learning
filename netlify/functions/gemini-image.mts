@@ -15,7 +15,7 @@ export default async (req: Request, _context: Context) => {
 
     const prompt = `Generate a clean, educational illustration or diagram about "${topic}"${context ? ` in the context of ${context}` : ''}. The image should be informative, visually clear, and help a student understand the concept. Use a modern, clean style with labels where appropriate.`
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${apiKey}`
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key=${apiKey}`
     const geminiRes = await fetch(geminiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

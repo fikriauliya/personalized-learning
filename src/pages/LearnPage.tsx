@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useLearningStore } from '../store'
 import type { SyllabusNode } from '../store'
+import { useProgressStore } from '../progress-store'
 import { generateSyllabus, generateImage } from '../api'
 
 import Sidebar from '../components/Sidebar'
@@ -23,17 +24,45 @@ function findNodeWithPath(nodes: SyllabusNode[], id: string, path: SyllabusNode[
   return undefined
 }
 
+function ProgressBar({ rootTopic }: { rootTopic: string }) {
+  const progress = useProgressStore(s => s.getProgress(rootTopic))
+  if (!progress || progress.totalNodes === 0) return null
+  const pct = Math.round((progress.visitedNodeIds.length / progress.totalNodes) * 100)
+  return (
+    <div className="mb-4 flex items-center gap-3">
+      <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-gradient-to-r from-brand-500 to-purple-500 rounded-full transition-all duration-500"
+          style={{ width: `${Math.min(pct, 100)}%` }}
+        />
+      </div>
+      <span className="text-xs font-medium text-slate-400 whitespace-nowrap">
+        {progress.visitedNodeIds.length}/{progress.totalNodes} explored
+      </span>
+    </div>
+  )
+}
+
 export default function LearnPage() {
   const { nodeId } = useParams()
   const navigate = useNavigate()
   const store = useLearningStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const markVisited = useProgressStore(s => s.markVisited)
 
   useEffect(() => {
     if (store.tree.length === 0) navigate('/')
   }, [store.tree, navigate])
 
   const selected = nodeId ? findNodeWithPath(store.tree, nodeId) : undefined
+
+  // Track progress
+  useEffect(() => {
+    if (!selected?.node?.content || !store.rootTopic) return
+    const countNodes = (nodes: SyllabusNode[]): number =>
+      nodes.reduce((sum, n) => sum + 1 + (n.children ? countNodes(n.children) : 0), 0)
+    markVisited(store.rootTopic, selected.node.id, countNodes(store.tree), store.narrationStyle)
+  }, [selected?.node.id, selected?.node.content])
 
   // Generate inline images on page load
   useEffect(() => {
@@ -134,6 +163,7 @@ export default function LearnPage() {
       <div className="flex-1 min-w-0">
         <div className="max-w-4xl mx-auto px-4 sm:px-5 lg:px-10 py-4 sm:py-6 lg:py-10 pt-14 sm:pt-16 lg:pt-10">
           <Breadcrumb items={breadcrumbPath} onNavigate={(id) => id ? navigate(`/learn/${id}`) : navigate('/learn')} />
+          <ProgressBar rootTopic={store.rootTopic} />
 
           <div className="animate-fade-in-up">
             {selected ? (

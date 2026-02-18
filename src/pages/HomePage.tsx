@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useLearningStore } from '../store'
 import type { NarrationStyle } from '../store'
+import { useProgressStore } from '../progress-store'
 import { generateSyllabus } from '../api'
 
 function makeId(title: string, layer: number) {
@@ -14,6 +15,59 @@ const STYLES: { value: NarrationStyle; label: string; desc: string; icon: string
   { value: 'eli5', label: 'ELI5', desc: 'Simple & fun', icon: '🧒', gradient: 'from-amber-400 to-orange-500' },
   { value: 'storytelling', label: 'Storytelling', desc: 'Narrative & analogies', icon: '📖', gradient: 'from-purple-500 to-pink-500' },
 ]
+
+function LearningHistory() {
+  const topics = useProgressStore(s => s.getAllTopics())
+  const removeTopic = useProgressStore(s => s.removeTopic)
+
+  if (topics.length === 0) return null
+
+  return (
+    <div className="mt-12 w-full max-w-xl mx-auto animate-fade-in" style={{ animationDelay: '500ms' }}>
+      <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3 text-left">📚 Your Learning History</h3>
+      <div className="space-y-2">
+        {topics.map(t => {
+          const pct = t.totalNodes > 0 ? Math.round((t.visitedNodeIds.length / t.totalNodes) * 100) : 0
+          const timeAgo = getTimeAgo(t.lastVisitedAt)
+          return (
+            <div key={t.rootTopic} className="flex items-center gap-3 bg-white/70 hover:bg-white rounded-xl px-4 py-3 border border-slate-200/60 hover:shadow-sm transition-all duration-200 group">
+              <div className="flex-1 min-w-0 text-left">
+                <div className="text-sm font-semibold text-slate-700 truncate">{t.rootTopic}</div>
+                <div className="text-xs text-slate-400 mt-0.5">{timeAgo} · {t.narrationStyle}</div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-brand-500 to-purple-500 rounded-full" style={{ width: `${Math.min(pct, 100)}%` }} />
+                </div>
+                <span className="text-xs text-slate-400 w-8 text-right">{pct}%</span>
+              </div>
+              <button
+                onClick={() => removeTopic(t.rootTopic)}
+                className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-400 transition-all duration-200 p-1"
+                title="Remove"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function getTimeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  const days = Math.floor(hrs / 24)
+  return `${days}d ago`
+}
 
 export default function HomePage() {
   const [query, setQuery] = useState('')
@@ -157,6 +211,9 @@ export default function HomePage() {
             </button>
           ))}
         </div>
+
+        {/* Learning History */}
+        <LearningHistory />
       </div>
     </div>
   )
