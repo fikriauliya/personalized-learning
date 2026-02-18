@@ -35,16 +35,25 @@ export default function LearnPage() {
 
   const selected = nodeId ? findNodeWithPath(store.tree, nodeId) : undefined
 
+  // Generate inline images on page load
   useEffect(() => {
     if (!selected) return
     const node = selected.node
-    if (node.imageLoading) return
     if (!node.content) return
-    store.setImageLoading(node.id, true)
-    const context = node.parentPath.join(' > ')
-    generateImage(node.title, context)
-      .then(img => store.setImage(node.id, img))
-      .catch(() => store.setImageLoading(node.id, false))
+    // Find all [[image:description]] markers
+    const imageRegex = /\[\[image:(.*?)\]\]/g
+    let match
+    while ((match = imageRegex.exec(node.content)) !== null) {
+      const desc = match[1]
+      // Skip if already loaded or loading
+      if (node.inlineImages?.[desc]) continue
+      if (node.inlineImagesLoading?.[desc]) continue
+      store.setInlineImageLoading(node.id, desc, true)
+      const context = [...node.parentPath, node.title].join(' > ')
+      generateImage(desc, context)
+        .then(img => store.setInlineImage(node.id, desc, img))
+        .catch(() => store.setInlineImageLoading(node.id, desc, false))
+    }
   }, [selected?.node.id, selected?.node.content])
 
   async function handleNodeClick(node: SyllabusNode) {

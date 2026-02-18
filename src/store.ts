@@ -10,8 +10,10 @@ export interface SyllabusNode {
   children?: SyllabusNode[]
   layer: number
   parentPath: string[] // titles of ancestors
-  image?: string // base64 image data
+  image?: string // base64 image data (legacy)
   imageLoading?: boolean
+  inlineImages?: Record<string, string> // key: image description, value: base64 data
+  inlineImagesLoading?: Record<string, boolean>
 }
 
 interface LearningState {
@@ -29,6 +31,8 @@ interface LearningState {
   setError: (nodeId: string, error: string) => void
   setImage: (nodeId: string, image: string) => void
   setImageLoading: (nodeId: string, loading: boolean) => void
+  setInlineImage: (nodeId: string, desc: string, image: string) => void
+  setInlineImageLoading: (nodeId: string, desc: string, loading: boolean) => void
   findNode: (nodeId: string) => SyllabusNode | undefined
   reset: () => void
 }
@@ -78,6 +82,19 @@ export const useLearningStore = create<LearningState>((set, get) => ({
   })),
   setImageLoading: (nodeId, loading) => set(state => ({
     tree: updateInTree(state.tree, nodeId, n => ({ ...n, imageLoading: loading }))
+  })),
+  setInlineImage: (nodeId, desc, image) => set(state => ({
+    tree: updateInTree(state.tree, nodeId, n => ({
+      ...n,
+      inlineImages: { ...(n.inlineImages || {}), [desc]: image },
+      inlineImagesLoading: { ...(n.inlineImagesLoading || {}), [desc]: false },
+    }))
+  })),
+  setInlineImageLoading: (nodeId, desc, loading) => set(state => ({
+    tree: updateInTree(state.tree, nodeId, n => ({
+      ...n,
+      inlineImagesLoading: { ...(n.inlineImagesLoading || {}), [desc]: loading },
+    }))
   })),
   findNode: (nodeId) => findInTree(get().tree, nodeId),
   reset: () => set({ rootTopic: '', tree: [], loading: {}, error: {} }),

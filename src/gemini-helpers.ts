@@ -9,6 +9,11 @@ export const STYLE_INSTRUCTIONS: Record<string, string> = {
 }
 
 export function buildPrompt(topic: string, layer: number, context: string, styleInstruction: string): string {
+  const imageInstruction = `
+- Where a visual would help understanding, insert an image marker: [[image:brief description of what to illustrate]]
+- Place image markers on their own line, right after the paragraph that needs the visual
+- Use 1-2 image markers per response, only where truly helpful (diagrams, processes, concepts)`
+
   if (layer === 4) {
     return `You are an expert educator. ${styleInstruction}
 
@@ -19,6 +24,7 @@ Requirements:
 - Include concrete examples, key insights, and practical understanding
 - Use markdown formatting (headers, bold, code blocks where relevant)
 - Make the content genuinely useful — not a surface-level summary
+${imageInstruction}
 
 Return ONLY a JSON object: {"title": "...", "content": "..."} where content is markdown. No wrapping code blocks.`
   }
@@ -35,6 +41,7 @@ Requirements:
 - The subtopics should flow naturally within sentences, not be listed separately
 - Use markdown formatting for emphasis, headers where appropriate
 - Make the content comprehensive enough to be valuable on its own
+${imageInstruction}
 
 Example of inline subtopic usage:
 "Understanding how [[subtopic:Neural Networks]] process information requires grasping the concept of [[subtopic:Backpropagation]]..."

@@ -37,16 +37,44 @@ function renderMarkdown(md: string): string {
     .replace(/\n\n/g, '</p><p class="text-slate-600 leading-[1.9] mb-4">')
 }
 
-function ContentWithSubtopics({ content, node: _node, onSubtopicClick }: { content: string; node: SyllabusNode; onSubtopicClick: (title: string) => void }) {
+function InlineImage({ desc, node }: { desc: string; node: SyllabusNode }) {
+  const image = node.inlineImages?.[desc]
+  const loading = node.inlineImagesLoading?.[desc]
+
+  if (loading) {
+    return (
+      <div className="my-6 h-48 rounded-2xl flex flex-col items-center justify-center gap-3 skeleton-shimmer">
+        <span className="text-2xl animate-float">🎨</span>
+        <span className="text-slate-400 text-sm font-medium">Generating illustration...</span>
+      </div>
+    )
+  }
+  if (!image) return null
+  return (
+    <figure className="my-6 rounded-2xl overflow-hidden shadow-lg shadow-slate-200/50 border border-slate-200/60 group">
+      <img
+        src={image}
+        alt={desc}
+        className="w-full max-h-[250px] sm:max-h-[350px] object-contain bg-gradient-to-br from-slate-50 to-white group-hover:scale-[1.01] transition-transform duration-500"
+      />
+      <figcaption className="px-4 py-2 text-xs text-slate-400 bg-slate-50 text-center italic">{desc}</figcaption>
+    </figure>
+  )
+}
+
+function ContentWithSubtopics({ content, node, onSubtopicClick }: { content: string; node: SyllabusNode; onSubtopicClick: (title: string) => void }) {
   const html = renderMarkdown(content)
-  const parts = html.split(/\[\[subtopic:(.*?)\]\]/)
+  // Split on both subtopic and image markers
+  const parts = html.split(/(\[\[subtopic:.*?\]\]|\[\[image:.*?\]\])/)
 
   const elements: React.ReactNode[] = []
   for (let i = 0; i < parts.length; i++) {
-    if (i % 2 === 0) {
-      elements.push(<span key={i} dangerouslySetInnerHTML={{ __html: parts[i] }} />)
-    } else {
-      const title = parts[i]
+    const part = parts[i]
+    const subtopicMatch = part.match(/\[\[subtopic:(.*?)\]\]/)
+    const imageMatch = part.match(/\[\[image:(.*?)\]\]/)
+
+    if (subtopicMatch) {
+      const title = subtopicMatch[1]
       elements.push(
         <button
           key={i}
@@ -59,6 +87,11 @@ function ContentWithSubtopics({ content, node: _node, onSubtopicClick }: { conte
           </svg>
         </button>
       )
+    } else if (imageMatch) {
+      const desc = imageMatch[1]
+      elements.push(<InlineImage key={i} desc={desc} node={node} />)
+    } else {
+      elements.push(<span key={i} dangerouslySetInnerHTML={{ __html: part }} />)
     }
   }
 
@@ -91,23 +124,6 @@ export default function ContentView({ node, loading, error, onChildClick: _, onS
 
       {node.content && (
         <div className="animate-fade-in-up">
-          {/* AI image */}
-          {node.image && (
-            <div className="mb-8 rounded-2xl overflow-hidden shadow-lg shadow-slate-200/50 border border-slate-200/60 group">
-              <img
-                src={node.image}
-                alt={`Illustration: ${node.title}`}
-                className="w-full max-h-[250px] sm:max-h-[400px] object-contain bg-gradient-to-br from-slate-50 to-white group-hover:scale-[1.01] transition-transform duration-500"
-              />
-            </div>
-          )}
-          {node.imageLoading && (
-            <div className="mb-8 h-52 rounded-2xl flex flex-col items-center justify-center gap-3 skeleton-shimmer">
-              <span className="text-2xl animate-float">🎨</span>
-              <span className="text-slate-400 text-sm font-medium">Generating illustration...</span>
-            </div>
-          )}
-
           {/* Content */}
           <div className="bg-white rounded-2xl shadow-sm shadow-slate-200/50 border border-slate-100 p-4 sm:p-6 md:p-8 lg:p-10">
             <ContentWithSubtopics content={node.content} node={node} onSubtopicClick={onSubtopicClick} />
