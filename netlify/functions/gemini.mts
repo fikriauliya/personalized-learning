@@ -65,7 +65,10 @@ No wrapping markdown code blocks, just raw JSON.`
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7 }
+        generationConfig: {
+          temperature: 0.7,
+          responseMimeType: 'application/json',
+        }
       })
     })
 
@@ -76,31 +79,62 @@ No wrapping markdown code blocks, just raw JSON.`
 
     const geminiData = await geminiRes.json()
     const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || ''
-    
-    // Strip markdown code fences
-    let cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
-    
-    // Escape control characters inside JSON string values before parsing.
-    // This handles newlines, tabs, and other control chars that Gemini
-    // sometimes includes raw inside JSON string literals.
-    cleaned = cleaned.replace(/[\x00-\x1f\x7f]/g, (ch: string) => {
-      switch (ch) {
-        case '\n': return '\\n'
-        case '\r': return '\\r'
-        case '\t': return '\\t'
-        default: return ''
-      }
-    })
 
     let parsed: any
     try {
-      parsed = JSON.parse(cleaned)
-    } catch (parseErr: any) {
-      console.error('JSON parse failed. Cleaned text:', cleaned.slice(0, 500))
-      return new Response(
-        JSON.stringify({ error: 'Failed to parse AI response. Please try again.' }),
-        { status: 502, headers: { 'Content-Type': 'application/json' } }
-      )
+      // With responseMimeType: application/json, Gemini should return valid JSON
+      parsed = JSON.parse(text)
+    } catch (_e1: any) {
+      // Fallback: strip code fences and try again
+      let cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
+      try {
+        parsed = JSON.parse(cleaned)
+      } catch (_e2: any) {
+        // Last resort: escape control chars inside string values only
+        // Walk through the string tracking whether we're inside a JSON string
+        let escaped = ''
+        let inString = false
+        let prevBackslash = false
+        for (let i = 0; i < cleaned.length; i++) {
+          const ch = cleaned[i]
+          if (inString) {
+            if (prevBackslash) {
+              escaped += ch
+              prevBackslash = false
+            } else if (ch === '\\') {
+              escaped += ch
+              prevBackslash = true
+            } else if (ch === '"') {
+              escaped += ch
+              inString = false
+            } else if (ch === '\n') {
+              escaped += '\\n'
+            } else if (ch === '\r') {
+              escaped += '\\r'
+            } else if (ch === '\t') {
+              escaped += '\\t'
+            } else if (ch.charCodeAt(0) < 0x20) {
+              // skip other control chars
+            } else {
+              escaped += ch
+            }
+          } else {
+            if (ch === '"') {
+              inString = true
+            }
+            escaped += ch
+          }
+        }
+        try {
+          parsed = JSON.parse(escaped)
+        } catch (e3: any) {
+          console.error('JSON parse failed after all attempts. Raw text:', text.slice(0, 500))
+          return new Response(
+            JSON.stringify({ error: 'Failed to parse AI response. Please try again.' }),
+            { status: 502, headers: { 'Content-Type': 'application/json' } }
+          )
+        }
+      }
     }
 
     return new Response(JSON.stringify(parsed), {
