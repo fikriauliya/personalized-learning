@@ -38,7 +38,7 @@ export default function LearnPage() {
   useEffect(() => {
     if (!selected) return
     const node = selected.node
-    if (node.image || node.imageLoading) return
+    if (node.imageLoading) return
     if (!node.content) return
     store.setImageLoading(node.id, true)
     const context = node.parentPath.join(' > ')
@@ -49,7 +49,6 @@ export default function LearnPage() {
 
   async function handleNodeClick(node: SyllabusNode) {
     navigate(`/learn/${node.id}`)
-    if (node.content) return
     if (store.loading[node.id]) return
     store.setLoading(node.id, true)
     try {
