@@ -17,13 +17,14 @@ export function buildPrompt(topic: string, layer: number, context: string, style
   if (layer === 4) {
     return `You are an expert educator. ${styleInstruction}
 
-Write a comprehensive, insightful explanation of "${topic}" in the context of learning ${context}.
+Write a clear, insightful explanation of "${topic}" in the context of learning ${context}.
 
 Requirements:
-- Write 4-6 paragraphs of rich educational content
-- Include concrete examples, key insights, and practical understanding
+- Write 4-6 SHORT paragraphs (2-3 sentences each, max 4 sentences)
+- Be concise but insightful — every sentence should add value
+- Use bullet points and lists where they improve clarity
 - Use markdown formatting (headers, bold, code blocks where relevant)
-- Make the content genuinely useful — not a surface-level summary
+- Prefer brevity over verbosity — cut the fluff
 ${imageInstruction}
 
 Return ONLY a JSON object: {"title": "...", "content": "..."} where content is markdown. No wrapping code blocks.`
@@ -35,7 +36,8 @@ Return ONLY a JSON object: {"title": "...", "content": "..."} where content is m
 Write rich, insightful educational content about "${topic}"${layer > 1 ? ` in the context of learning ${context}` : ''}.
 
 Requirements:
-- Write 3-5 paragraphs of genuinely useful educational content — multiple paragraphs of real insight, not just a summary
+- Write 3-5 SHORT paragraphs (2-3 sentences each, max 4 sentences) — concise but insightful
+- Use bullet points and lists to break up dense information
 - Within the prose, naturally introduce ${subtopicCount} subtopics that a learner should explore deeper
 - Mark each subtopic using this exact syntax: [[subtopic:Subtopic Name]] — these will become clickable links
 - The subtopics should flow naturally within sentences, not be listed separately
