@@ -1,146 +1,90 @@
 import type { Context } from "@netlify/functions"
+import { Effect, pipe } from 'effect'
+import { ConfigError, GeminiApiError, JsonParseError } from '../../src/errors'
+import { STYLE_INSTRUCTIONS, buildPrompt, parseGeminiJson } from '../../src/gemini-helpers'
 
-const STYLE_INSTRUCTIONS: Record<string, string> = {
-  academic: 'Use a formal, academic tone. Write like a university textbook — precise, structured, and authoritative.',
-  casual: 'Use a casual, conversational tone. Be friendly and approachable, like explaining to a friend.',
-  eli5: 'Explain like I\'m 5 years old. Use very simple language, everyday analogies, and short sentences. Make it fun and easy to understand.',
-  storytelling: 'Use a narrative, storytelling style. Weave in analogies, metaphors, and real-world stories. Make it engaging and memorable.',
-}
-
-export default async (req: Request, _context: Context) => {
-  if (req.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 })
-  }
-
+const getApiKey = Effect.gen(function* () {
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) {
-    return new Response('GEMINI_API_KEY not configured', { status: 500 })
+    return yield* Effect.fail(new ConfigError('GEMINI_API_KEY not configured'))
   }
+  return apiKey
+})
 
-  try {
-    const { topic, layer, rootTopic, parentPath, narrationStyle = 'casual' } = await req.json()
-    const styleInstruction = STYLE_INSTRUCTIONS[narrationStyle] || STYLE_INSTRUCTIONS.casual
-    const context = parentPath.length > 0 ? parentPath.join(' > ') : rootTopic
+function callGemini(apiKey: string, prompt: string) {
+  return Effect.tryPromise({
+    try: async () => {
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`
+      const res = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            responseMimeType: 'application/json',
+          }
+        })
+      })
+      if (!res.ok) {
+        const errText = await res.text()
+        throw new GeminiApiError(`Gemini API error: ${errText}`, res.status)
+      }
+      const data = await res.json()
+      return (data.candidates?.[0]?.content?.parts?.[0]?.text || '') as string
+    },
+    catch: (e) => {
+      if (e instanceof GeminiApiError) return e
+      return new GeminiApiError(e instanceof Error ? e.message : 'Unknown error')
+    }
+  })
+}
 
-    let prompt: string
-    if (layer === 4) {
-      // Deepest layer: detailed content, no subtopics
-      prompt = `You are an expert educator. ${styleInstruction}
-
-Write a comprehensive, insightful explanation of "${topic}" in the context of learning ${context}.
-
-Requirements:
-- Write 4-6 paragraphs of rich educational content
-- Include concrete examples, key insights, and practical understanding
-- Use markdown formatting (headers, bold, code blocks where relevant)
-- Make the content genuinely useful — not a surface-level summary
-
-Return ONLY a JSON object: {"title": "...", "content": "..."} where content is markdown. No wrapping code blocks.`
-    } else {
-      // Layers 1-3: rich content WITH inline subtopic links
-      const subtopicCount = layer === 1 ? '5-8' : '4-6'
-      prompt = `You are an expert educator. ${styleInstruction}
-
-Write rich, insightful educational content about "${topic}"${layer > 1 ? ` in the context of learning ${context}` : ''}.
-
-Requirements:
-- Write 3-5 paragraphs of genuinely useful educational content — multiple paragraphs of real insight, not just a summary
-- Within the prose, naturally introduce ${subtopicCount} subtopics that a learner should explore deeper
-- Mark each subtopic using this exact syntax: [[subtopic:Subtopic Name]] — these will become clickable links
-- The subtopics should flow naturally within sentences, not be listed separately
-- Use markdown formatting for emphasis, headers where appropriate
-- Make the content comprehensive enough to be valuable on its own
-
-Example of inline subtopic usage:
-"Understanding how [[subtopic:Neural Networks]] process information requires grasping the concept of [[subtopic:Backpropagation]]..."
-
-Return ONLY a JSON object: {"title": "...", "content": "...", "subtopics": ["Subtopic Name 1", "Subtopic Name 2", ...]}
-The subtopics array should list all the subtopic names used in [[subtopic:...]] markers.
-No wrapping markdown code blocks, just raw JSON.`
+function handleRequest(req: Request) {
+  return Effect.gen(function* () {
+    if (req.method !== 'POST') {
+      return new Response('Method not allowed', { status: 405 })
     }
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`
-    const geminiRes = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          responseMimeType: 'application/json',
-        }
-      })
+    const apiKey = yield* getApiKey
+
+    const body = yield* Effect.tryPromise({
+      try: () => req.json(),
+      catch: () => new GeminiApiError('Invalid request body')
     })
 
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text()
-      return new Response(`Gemini API error: ${errText}`, { status: 502 })
-    }
+    const { topic, layer, rootTopic, parentPath, narrationStyle = 'casual' } = body
+    const styleInstruction = STYLE_INSTRUCTIONS[narrationStyle] || STYLE_INSTRUCTIONS.casual
+    const context = parentPath.length > 0 ? parentPath.join(' > ') : rootTopic
+    const prompt = buildPrompt(topic, layer, context, styleInstruction)
 
-    const geminiData = await geminiRes.json()
-    const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || ''
-
-    let parsed: any
-    try {
-      // With responseMimeType: application/json, Gemini should return valid JSON
-      parsed = JSON.parse(text)
-    } catch (_e1: any) {
-      // Fallback: strip code fences and try again
-      let cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
-      try {
-        parsed = JSON.parse(cleaned)
-      } catch (_e2: any) {
-        // Last resort: escape control chars inside string values only
-        // Walk through the string tracking whether we're inside a JSON string
-        let escaped = ''
-        let inString = false
-        let prevBackslash = false
-        for (let i = 0; i < cleaned.length; i++) {
-          const ch = cleaned[i]
-          if (inString) {
-            if (prevBackslash) {
-              escaped += ch
-              prevBackslash = false
-            } else if (ch === '\\') {
-              escaped += ch
-              prevBackslash = true
-            } else if (ch === '"') {
-              escaped += ch
-              inString = false
-            } else if (ch === '\n') {
-              escaped += '\\n'
-            } else if (ch === '\r') {
-              escaped += '\\r'
-            } else if (ch === '\t') {
-              escaped += '\\t'
-            } else if (ch.charCodeAt(0) < 0x20) {
-              // skip other control chars
-            } else {
-              escaped += ch
-            }
-          } else {
-            if (ch === '"') {
-              inString = true
-            }
-            escaped += ch
-          }
-        }
-        try {
-          parsed = JSON.parse(escaped)
-        } catch (e3: any) {
-          console.error('JSON parse failed after all attempts. Raw text:', text.slice(0, 500))
-          return new Response(
-            JSON.stringify({ error: 'Failed to parse AI response. Please try again.' }),
-            { status: 502, headers: { 'Content-Type': 'application/json' } }
-          )
-        }
-      }
-    }
+    const text = yield* callGemini(apiKey, prompt)
+    const parsed = yield* parseGeminiJson(text)
 
     return new Response(JSON.stringify(parsed), {
       headers: { 'Content-Type': 'application/json' }
     })
-  } catch (err: any) {
-    return new Response(`Error: ${err.message}`, { status: 500 })
-  }
+  })
+}
+
+export default async (req: Request, _context: Context) => {
+  return pipe(
+    handleRequest(req),
+    Effect.catchAll((error) => {
+      if (error instanceof ConfigError) {
+        return Effect.succeed(new Response(error.message, { status: 500 }))
+      }
+      if (error instanceof GeminiApiError) {
+        return Effect.succeed(new Response(error.message, { status: 502 }))
+      }
+      if (error instanceof JsonParseError) {
+        return Effect.succeed(new Response(
+          JSON.stringify({ error: 'Failed to parse AI response. Please try again.' }),
+          { status: 502, headers: { 'Content-Type': 'application/json' } }
+        ))
+      }
+      return Effect.succeed(new Response(`Error: ${String(error)}`, { status: 500 }))
+    }),
+    Effect.runPromise
+  )
 }
