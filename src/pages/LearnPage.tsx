@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useLearningStore } from '../store'
 import type { SyllabusNode } from '../store'
-import { generateSyllabus } from '../api'
+import { generateSyllabus, generateImage } from '../api'
 
 import Sidebar from '../components/Sidebar'
 import Breadcrumb from '../components/Breadcrumb'
@@ -29,59 +29,76 @@ export default function LearnPage() {
   const store = useLearningStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  // Redirect to home if no tree
   useEffect(() => {
     if (store.tree.length === 0) navigate('/')
   }, [store.tree, navigate])
 
   const selected = nodeId ? findNodeWithPath(store.tree, nodeId) : undefined
 
+  // Generate image on page load for selected node
+  useEffect(() => {
+    if (!selected) return
+    const node = selected.node
+    if (node.image || node.imageLoading) return
+    if (!node.content) return
+    
+    store.setImageLoading(node.id, true)
+    const context = node.parentPath.join(' > ')
+    generateImage(node.title, context)
+      .then(img => store.setImage(node.id, img))
+      .catch(() => store.setImageLoading(node.id, false))
+  }, [selected?.node.id, selected?.node.content])
+
   async function handleNodeClick(node: SyllabusNode) {
     navigate(`/learn/${node.id}`)
 
-    // If layer 4, generate content if not cached
-    if (node.layer === 4 && !node.content) {
-      if (store.loading[node.id]) return
-      store.setLoading(node.id, true)
-      try {
-        const data = await generateSyllabus(node.title, 4, store.rootTopic, node.parentPath)
-        store.setContent(node.id, data.content)
-      } catch (err: any) {
-        store.setError(node.id, err.message)
-      } finally {
-        store.setLoading(node.id, false)
-      }
-      return
-    }
+    // If content already loaded, nothing to do
+    if (node.content) return
 
-    // If layers 1-3, generate children if not cached
-    if (node.layer < 4 && !node.children) {
-      if (store.loading[node.id]) return
-      store.setLoading(node.id, true)
-      try {
+    if (store.loading[node.id]) return
+    store.setLoading(node.id, true)
+    try {
+      if (node.layer >= 3) {
+        // Layer 4 (deepest): content only, no subtopics
+        const data = await generateSyllabus(node.title, 4, store.rootTopic, node.parentPath, store.narrationStyle)
+        store.setContent(node.id, data.content)
+      } else {
+        // Layers 0-2: content with inline subtopic links
         const nextLayer = node.layer + 1
-        const data = await generateSyllabus(node.title, nextLayer, store.rootTopic, [...node.parentPath, node.title])
-        const children = data.map((item: any) => ({
-          id: makeId(item.title, nextLayer),
-          title: item.title,
-          description: nextLayer === 4 ? item.description : item.description,
+        const data = await generateSyllabus(node.title, nextLayer, store.rootTopic, [...node.parentPath, node.title], store.narrationStyle)
+        store.setContent(node.id, data.content)
+        const children = (data.subtopics || []).map((st: string) => ({
+          id: makeId(st, nextLayer),
+          title: st,
+          description: '',
           layer: nextLayer,
           parentPath: [...node.parentPath, node.title],
         }))
         store.setChildren(node.id, children)
-      } catch (err: any) {
-        store.setError(node.id, err.message)
-      } finally {
-        store.setLoading(node.id, false)
       }
+    } catch (err: any) {
+      store.setError(node.id, err.message)
+    } finally {
+      store.setLoading(node.id, false)
     }
   }
 
-  const breadcrumbPath = selected ? [{ title: store.rootTopic, id: '' }, ...selected.path.map(n => ({ title: n.title, id: n.id }))] : [{ title: store.rootTopic, id: '' }]
+  // Find child node by title (for inline subtopic links)
+  function handleSubtopicClick(subtopicTitle: string) {
+    if (!selected) return
+    const node = selected.node
+    const child = node.children?.find(c => c.title === subtopicTitle)
+    if (child) {
+      handleNodeClick(child)
+    }
+  }
+
+  const breadcrumbPath = selected
+    ? [{ title: store.rootTopic, id: selected.path[0]?.id || '' }, ...selected.path.map(n => ({ title: n.title, id: n.id }))]
+    : [{ title: store.rootTopic, id: '' }]
 
   return (
     <div className="min-h-screen flex bg-slate-50">
-      {/* Mobile sidebar toggle */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
         className="fixed top-3 left-3 z-50 lg:hidden bg-white p-2 rounded-lg shadow-md"
@@ -91,7 +108,6 @@ export default function LearnPage() {
         </svg>
       </button>
 
-      {/* Sidebar */}
       <div className={`fixed lg:static inset-y-0 left-0 z-40 w-72 bg-white border-r border-slate-200 overflow-y-auto transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
         <div className="p-4 border-b border-slate-200">
           <Link to="/" className="text-lg font-semibold text-blue-600 hover:text-blue-700">🎓 New Topic</Link>
@@ -104,40 +120,22 @@ export default function LearnPage() {
         />
       </div>
 
-      {/* Overlay */}
       {sidebarOpen && <div className="fixed inset-0 bg-black/30 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
-      {/* Main */}
       <div className="flex-1 min-w-0">
         <div className="max-w-4xl mx-auto p-4 lg:p-8 pt-14 lg:pt-8">
           <Breadcrumb items={breadcrumbPath} onNavigate={(id) => id ? navigate(`/learn/${id}`) : navigate('/learn')} />
 
-          {!nodeId ? (
-            // Show layer 1 items
-            <div>
-              <h1 className="text-3xl font-bold text-slate-800 mb-6">{store.rootTopic}</h1>
-              <div className="grid gap-3">
-                {store.tree.map(node => (
-                  <button
-                    key={node.id}
-                    onClick={() => handleNodeClick(node)}
-                    className="text-left p-4 bg-white rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-md transition"
-                  >
-                    <h3 className="font-semibold text-slate-800">{node.title}</h3>
-                    <p className="text-sm text-slate-500 mt-1">{node.description}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : selected ? (
+          {selected ? (
             <ContentView
               node={selected.node}
               loading={!!store.loading[selected.node.id]}
               error={store.error[selected.node.id]}
               onChildClick={handleNodeClick}
+              onSubtopicClick={handleSubtopicClick}
             />
           ) : (
-            <p className="text-slate-500">Node not found</p>
+            <p className="text-slate-500">Select a topic from the sidebar</p>
           )}
         </div>
       </div>
