@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { SyllabusNode } from '../store'
+import { estimateReadTime } from '../utils'
 
 interface Props {
   nodes: SyllabusNode[]
@@ -50,6 +51,9 @@ function SidebarItem({ node, selectedId, loading, onNodeClick, depth = 0 }: Prop
           <LayerDot layer={node.layer} />
         )}
         <span className="truncate">{node.title}</span>
+        {node.content && (
+          <span className="ml-auto text-[10px] text-slate-400 flex-shrink-0 hidden sm:inline">{estimateReadTime(node.content)}</span>
+        )}
         {loading[node.id] && (
           <div className="ml-auto flex-shrink-0">
             <svg className="animate-spin h-3.5 w-3.5 text-brand-500" viewBox="0 0 24 24">

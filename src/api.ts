@@ -60,3 +60,55 @@ export async function generateImage(topic: string, context: string): Promise<str
     Effect.runPromise
   )
 }
+
+export interface QuizQuestion {
+  question: string
+  options: string[]
+  correctIndex: number
+  explanation: string
+}
+
+export function generateQuizEffect(topic: string, content: string) {
+  return pipe(
+    fetchJson('/.netlify/functions/gemini-quiz', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic, content }),
+    }),
+    Effect.map((data: any) => data.questions as QuizQuestion[])
+  )
+}
+
+export async function generateQuiz(topic: string, content: string): Promise<QuizQuestion[]> {
+  return pipe(
+    generateQuizEffect(topic, content),
+    Effect.catchAll((error) => Effect.fail(new Error(error.message))),
+    Effect.runPromise
+  )
+}
+
+export interface EvaluationResult {
+  score: number
+  gotRight: string[]
+  missed: string[]
+  correctedExplanation: string
+}
+
+export function evaluateExplanationEffect(topic: string, content: string, explanation: string) {
+  return pipe(
+    fetchJson('/.netlify/functions/gemini-evaluate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic, content, explanation }),
+    }),
+    Effect.map((data: any) => data as EvaluationResult)
+  )
+}
+
+export async function evaluateExplanation(topic: string, content: string, explanation: string): Promise<EvaluationResult> {
+  return pipe(
+    evaluateExplanationEffect(topic, content, explanation),
+    Effect.catchAll((error) => Effect.fail(new Error(error.message))),
+    Effect.runPromise
+  )
+}

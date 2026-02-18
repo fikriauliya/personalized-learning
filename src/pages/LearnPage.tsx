@@ -8,6 +8,7 @@ import { generateSyllabus, generateImage } from '../api'
 import Sidebar from '../components/Sidebar'
 import Breadcrumb from '../components/Breadcrumb'
 import ContentView from '../components/ContentView'
+import KnowledgeMap from '../components/KnowledgeMap'
 
 function makeId(title: string, layer: number) {
   return `${layer}-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40)}-${Math.random().toString(36).slice(2, 6)}`
@@ -48,6 +49,7 @@ export default function LearnPage() {
   const navigate = useNavigate()
   const store = useLearningStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [viewMode, setViewMode] = useState<'tree' | 'map'>('tree')
   const markVisited = useProgressStore(s => s.markVisited)
 
   useEffect(() => {
@@ -142,13 +144,37 @@ export default function LearnPage() {
             <span className="text-xl group-hover:scale-110 transition-transform duration-300">🎓</span>
             <span className="text-lg font-bold bg-gradient-to-r from-brand-700 to-brand-500 bg-clip-text text-transparent font-display">Lumina</span>
           </Link>
+          <div className="flex mt-3 bg-slate-100 rounded-lg p-0.5">
+            <button
+              onClick={() => setViewMode('tree')}
+              className={`flex-1 text-xs font-medium py-1.5 rounded-md transition-all ${viewMode === 'tree' ? 'bg-white shadow-sm text-brand-600' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              🌳 Tree
+            </button>
+            <button
+              onClick={() => setViewMode('map')}
+              className={`flex-1 text-xs font-medium py-1.5 rounded-md transition-all ${viewMode === 'map' ? 'bg-white shadow-sm text-brand-600' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              🗺️ Map
+            </button>
+          </div>
         </div>
-        <Sidebar
-          nodes={store.tree}
-          selectedId={nodeId}
-          loading={store.loading}
-          onNodeClick={(node) => { handleNodeClick(node); setSidebarOpen(false) }}
-        />
+        {viewMode === 'tree' ? (
+          <Sidebar
+            nodes={store.tree}
+            selectedId={nodeId}
+            loading={store.loading}
+            onNodeClick={(node) => { handleNodeClick(node); setSidebarOpen(false) }}
+          />
+        ) : (
+          <KnowledgeMap
+            nodes={store.tree}
+            selectedId={nodeId}
+            loading={store.loading}
+            onNodeClick={(node) => { handleNodeClick(node); setSidebarOpen(false) }}
+            rootTopic={store.rootTopic}
+          />
+        )}
       </div>
 
       {/* Overlay */}
@@ -173,6 +199,7 @@ export default function LearnPage() {
                 error={store.error[selected.node.id]}
                 onChildClick={handleNodeClick}
                 onSubtopicClick={handleSubtopicClick}
+                rootTopic={store.rootTopic}
               />
             ) : (
               <div className="text-center py-20 text-slate-400">

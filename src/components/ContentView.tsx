@@ -1,5 +1,8 @@
 import React from 'react'
 import type { SyllabusNode } from '../store'
+import { estimateReadTime } from '../utils'
+import Quiz from './Quiz'
+import ExplainBack from './ExplainBack'
 
 interface Props {
   node: SyllabusNode
@@ -7,6 +10,7 @@ interface Props {
   error?: string
   onChildClick: (node: SyllabusNode) => void
   onSubtopicClick: (title: string) => void
+  rootTopic?: string
 }
 
 function Skeleton() {
@@ -98,7 +102,7 @@ function ContentWithSubtopics({ content, node, onSubtopicClick }: { content: str
   return <div className="prose-content max-w-none text-slate-600 leading-[1.9]">{elements}</div>
 }
 
-export default function ContentView({ node, loading, error, onChildClick: _, onSubtopicClick }: Props) {
+export default function ContentView({ node, loading, error, onChildClick: _, onSubtopicClick, rootTopic }: Props) {
   return (
     <div>
       {/* Title */}
@@ -106,6 +110,12 @@ export default function ContentView({ node, loading, error, onChildClick: _, onS
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-800 leading-tight font-display">
           {node.title}
         </h1>
+        {node.content && (
+          <p className="mt-2 text-sm text-slate-400 flex items-center gap-1.5">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            {estimateReadTime(node.content)}
+          </p>
+        )}
       </div>
 
       {loading && <Skeleton />}
@@ -122,6 +132,14 @@ export default function ContentView({ node, loading, error, onChildClick: _, onS
           <div className="bg-white rounded-2xl shadow-sm shadow-slate-200/50 border border-slate-100 p-4 sm:p-6 md:p-8 lg:p-10">
             <ContentWithSubtopics content={node.content} node={node} onSubtopicClick={onSubtopicClick} />
           </div>
+
+          {/* Engagement features */}
+          {rootTopic && (
+            <>
+              <Quiz topic={node.title} content={node.content} nodeId={node.id} rootTopic={rootTopic} />
+              <ExplainBack topic={node.title} content={node.content} nodeId={node.id} rootTopic={rootTopic} />
+            </>
+          )}
         </div>
       )}
     </div>

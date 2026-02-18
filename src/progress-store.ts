@@ -1,5 +1,18 @@
 import { create } from 'zustand'
 
+export interface QuizResult {
+  nodeId: string
+  score: number
+  total: number
+  completedAt: string
+}
+
+export interface ExplainBackResult {
+  nodeId: string
+  score: number
+  completedAt: string
+}
+
 export interface TopicProgress {
   rootTopic: string
   narrationStyle: string
@@ -7,11 +20,17 @@ export interface TopicProgress {
   totalNodes: number
   startedAt: string
   lastVisitedAt: string
+  quizResults?: Record<string, QuizResult> // keyed by nodeId
+  explainBackResults?: Record<string, ExplainBackResult> // keyed by nodeId
 }
 
 interface ProgressState {
   topics: Record<string, TopicProgress> // key: rootTopic
   markVisited: (rootTopic: string, nodeId: string, totalNodes: number, narrationStyle: string) => void
+  saveQuizResult: (rootTopic: string, nodeId: string, score: number, total: number) => void
+  saveExplainBackResult: (rootTopic: string, nodeId: string, score: number) => void
+  getQuizResult: (rootTopic: string, nodeId: string) => QuizResult | undefined
+  getExplainBackResult: (rootTopic: string, nodeId: string) => ExplainBackResult | undefined
   getProgress: (rootTopic: string) => TopicProgress | undefined
   getAllTopics: () => TopicProgress[]
   removeTopic: (rootTopic: string) => void
@@ -58,6 +77,44 @@ export const useProgressStore = create<ProgressState>((set, get) => ({
     saveToStorage(updated)
     return { topics: updated }
   }),
+
+  saveQuizResult: (rootTopic, nodeId, score, total) => set(state => {
+    const existing = state.topics[rootTopic]
+    if (!existing) return state
+    const updated = {
+      ...state.topics,
+      [rootTopic]: {
+        ...existing,
+        quizResults: {
+          ...(existing.quizResults || {}),
+          [nodeId]: { nodeId, score, total, completedAt: new Date().toISOString() },
+        },
+      },
+    }
+    saveToStorage(updated)
+    return { topics: updated }
+  }),
+
+  saveExplainBackResult: (rootTopic, nodeId, score) => set(state => {
+    const existing = state.topics[rootTopic]
+    if (!existing) return state
+    const updated = {
+      ...state.topics,
+      [rootTopic]: {
+        ...existing,
+        explainBackResults: {
+          ...(existing.explainBackResults || {}),
+          [nodeId]: { nodeId, score, completedAt: new Date().toISOString() },
+        },
+      },
+    }
+    saveToStorage(updated)
+    return { topics: updated }
+  }),
+
+  getQuizResult: (rootTopic, nodeId) => get().topics[rootTopic]?.quizResults?.[nodeId],
+
+  getExplainBackResult: (rootTopic, nodeId) => get().topics[rootTopic]?.explainBackResults?.[nodeId],
 
   getProgress: (rootTopic) => get().topics[rootTopic],
 
