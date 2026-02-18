@@ -21,7 +21,7 @@ export default function Quiz({ topic, content, nodeId, rootTopic }: Props) {
   const [error, setError] = useState('')
 
   const saveQuizResult = useProgressStore(s => s.saveQuizResult)
-  const existingResult = useProgressStore(s => s.getQuizResult(rootTopic, nodeId))
+  const existingResult = useProgressStore(s => s.topics[rootTopic]?.quizResults?.[nodeId])
 
   async function handleStart() {
     setStarted(true)

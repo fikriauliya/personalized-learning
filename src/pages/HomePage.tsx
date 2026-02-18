@@ -17,7 +17,8 @@ const STYLES: { value: NarrationStyle; label: string; desc: string; icon: string
 ]
 
 function LearningHistory() {
-  const topics = useProgressStore(s => s.getAllTopics())
+  const getAllTopics = useProgressStore(s => s.getAllTopics)
+  const topics = getAllTopics()
   const removeTopic = useProgressStore(s => s.removeTopic)
 
   if (topics.length === 0) return null

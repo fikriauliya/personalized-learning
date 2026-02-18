@@ -71,7 +71,7 @@ export default function KnowledgeMap({ nodes, selectedId, loading, onNodeClick, 
   const svgRef = useRef<SVGSVGElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState({ width: 600, height: 400 })
-  const progress = useProgressStore(s => s.getProgress(rootTopic))
+  const progress = useProgressStore(s => s.topics[rootTopic])
   const visitedIds = new Set(progress?.visitedNodeIds || [])
 
   const updateDimensions = useCallback(() => {

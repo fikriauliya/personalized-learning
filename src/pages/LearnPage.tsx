@@ -26,7 +26,7 @@ function findNodeWithPath(nodes: SyllabusNode[], id: string, path: SyllabusNode[
 }
 
 function ProgressBar({ rootTopic }: { rootTopic: string }) {
-  const progress = useProgressStore(s => s.getProgress(rootTopic))
+  const progress = useProgressStore(s => s.topics[rootTopic])
   if (!progress || progress.totalNodes === 0) return null
   const pct = Math.round((progress.visitedNodeIds.length / progress.totalNodes) * 100)
   return (

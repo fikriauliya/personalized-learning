@@ -27,7 +27,7 @@ export default function ExplainBack({ topic, content, nodeId, rootTopic }: Props
   const [error, setError] = useState('')
 
   const saveResult = useProgressStore(s => s.saveExplainBackResult)
-  const existingResult = useProgressStore(s => s.getExplainBackResult(rootTopic, nodeId))
+  const existingResult = useProgressStore(s => s.topics[rootTopic]?.explainBackResults?.[nodeId])
 
   async function handleSubmit() {
     if (!text.trim() || text.trim().length < 20) return
