@@ -101,14 +101,8 @@ function ContentWithSubtopics({ content, node, onSubtopicClick }: { content: str
 export default function ContentView({ node, loading, error, onChildClick: _, onSubtopicClick }: Props) {
   return (
     <div>
-      {/* Title with gradient accent */}
+      {/* Title */}
       <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-1.5 h-8 rounded-full bg-gradient-to-b from-brand-500 to-purple-500" />
-          <span className="text-xs font-semibold uppercase tracking-widest text-brand-500">
-            Layer {node.layer + 1}
-          </span>
-        </div>
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-800 leading-tight font-display">
           {node.title}
         </h1>
