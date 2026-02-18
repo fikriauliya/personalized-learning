@@ -98,6 +98,16 @@
 .prose-content strong { color: #1e293b; }
 .prose-content em { color: #475569; }
 
+/* Mobile touch targets */
+@media (max-width: 640px) {
+  .prose-content { font-size: 0.95rem; line-height: 1.75; }
+  .prose-content pre { font-size: 0.8rem; padding: 1rem; }
+}
+
+/* Prevent horizontal overflow on mobile */
+html, body { overflow-x: hidden; }
+pre { overflow-x: auto; max-width: 100%; }
+
 /* Glass effect */
 .glass {
   background: rgba(255, 255, 255, 0.7);

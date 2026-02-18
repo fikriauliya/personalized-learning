@@ -98,7 +98,7 @@ export default function LearnPage() {
       </button>
 
       {/* Sidebar */}
-      <div className={`fixed lg:static inset-y-0 left-0 z-40 w-80 bg-white/95 backdrop-blur-xl border-r border-slate-200/60 overflow-y-auto transition-all duration-500 ease-out ${sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full shadow-none'} lg:translate-x-0 lg:shadow-none`}>
+      <div className={`fixed lg:static inset-y-0 left-0 z-40 w-[85vw] max-w-80 bg-white/95 backdrop-blur-xl border-r border-slate-200/60 overflow-y-auto transition-all duration-500 ease-out ${sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full shadow-none'} lg:translate-x-0 lg:shadow-none`}>
         <div className="p-5 border-b border-slate-100">
           <Link to="/" className="flex items-center gap-2.5 group">
             <span className="text-xl group-hover:scale-110 transition-transform duration-300">🎓</span>
@@ -123,7 +123,7 @@ export default function LearnPage() {
 
       {/* Main content */}
       <div className="flex-1 min-w-0">
-        <div className="max-w-4xl mx-auto px-5 lg:px-10 py-6 lg:py-10 pt-16 lg:pt-10">
+        <div className="max-w-4xl mx-auto px-4 sm:px-5 lg:px-10 py-4 sm:py-6 lg:py-10 pt-14 sm:pt-16 lg:pt-10">
           <Breadcrumb items={breadcrumbPath} onNavigate={(id) => id ? navigate(`/learn/${id}`) : navigate('/learn')} />
 
           <div className="animate-fade-in-up">

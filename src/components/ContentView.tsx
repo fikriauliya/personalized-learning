@@ -76,7 +76,7 @@ export default function ContentView({ node, loading, error, onChildClick: _, onS
             Layer {node.layer + 1}
           </span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-800 leading-tight font-display">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-slate-800 leading-tight font-display">
           {node.title}
         </h1>
       </div>
@@ -97,7 +97,7 @@ export default function ContentView({ node, loading, error, onChildClick: _, onS
               <img
                 src={node.image}
                 alt={`Illustration: ${node.title}`}
-                className="w-full max-h-[400px] object-contain bg-gradient-to-br from-slate-50 to-white group-hover:scale-[1.01] transition-transform duration-500"
+                className="w-full max-h-[250px] sm:max-h-[400px] object-contain bg-gradient-to-br from-slate-50 to-white group-hover:scale-[1.01] transition-transform duration-500"
               />
             </div>
           )}
@@ -109,7 +109,7 @@ export default function ContentView({ node, loading, error, onChildClick: _, onS
           )}
 
           {/* Content */}
-          <div className="bg-white rounded-2xl shadow-sm shadow-slate-200/50 border border-slate-100 p-6 sm:p-8 lg:p-10">
+          <div className="bg-white rounded-2xl shadow-sm shadow-slate-200/50 border border-slate-100 p-4 sm:p-6 md:p-8 lg:p-10">
             <ContentWithSubtopics content={node.content} node={node} onSubtopicClick={onSubtopicClick} />
           </div>
         </div>

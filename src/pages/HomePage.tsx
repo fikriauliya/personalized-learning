@@ -71,37 +71,37 @@ export default function HomePage() {
         {/* Logo */}
         <div className="mb-8">
           <span className="text-6xl animate-float inline-block">🎓</span>
-          <h1 className="text-5xl sm:text-6xl font-extrabold mt-4 bg-gradient-to-r from-brand-700 via-brand-500 to-purple-500 bg-clip-text text-transparent font-display">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold mt-4 bg-gradient-to-r from-brand-700 via-brand-500 to-purple-500 bg-clip-text text-transparent font-display">
             Lumina
           </h1>
-          <p className="text-slate-500 mt-3 text-lg">Your AI-powered learning companion</p>
+          <p className="text-slate-500 mt-3 text-base sm:text-lg">Your AI-powered learning companion</p>
         </div>
 
         <form onSubmit={handleSearch} className="flex flex-col gap-5 w-full max-w-xl mx-auto">
           {/* Search input */}
           <div className="relative group">
             <div className="absolute -inset-0.5 bg-gradient-to-r from-brand-400 to-purple-400 rounded-2xl opacity-0 group-focus-within:opacity-100 blur transition-all duration-500" />
-            <div className="relative flex bg-white rounded-2xl shadow-lg shadow-brand-100/50 border border-slate-200/80">
+            <div className="relative flex flex-col sm:flex-row bg-white rounded-2xl shadow-lg shadow-brand-100/50 border border-slate-200/80">
               <input
                 type="text"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 placeholder="What do you want to learn?"
-                className="flex-1 px-6 py-4 rounded-l-2xl text-lg bg-transparent focus:outline-none text-slate-800 placeholder:text-slate-400"
+                className="flex-1 px-5 sm:px-6 py-3.5 sm:py-4 rounded-t-2xl sm:rounded-t-none sm:rounded-l-2xl text-base sm:text-lg bg-transparent focus:outline-none text-slate-800 placeholder:text-slate-400"
                 disabled={loading}
               />
               <button
                 type="submit"
                 disabled={loading || !query.trim()}
-                className="px-7 py-4 bg-gradient-to-r from-brand-600 to-brand-700 text-white rounded-r-2xl text-lg font-semibold hover:from-brand-700 hover:to-brand-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 active:scale-95"
+                className="px-6 sm:px-7 py-3.5 sm:py-4 bg-gradient-to-r from-brand-600 to-brand-700 text-white rounded-b-2xl sm:rounded-b-none sm:rounded-r-2xl text-base sm:text-lg font-semibold hover:from-brand-700 hover:to-brand-800 disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-300 active:scale-95"
               >
                 {loading ? (
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center justify-center gap-2">
                     <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
                     <span>Generating...</span>
                   </span>
                 ) : (
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center justify-center gap-2">
                     <span>Explore</span>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
                   </span>
@@ -113,7 +113,7 @@ export default function HomePage() {
           {/* Style selector */}
           <div>
             <p className="text-sm font-medium text-slate-500 mb-3 uppercase tracking-wider">Narration Style</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 stagger-children">
+            <div className="grid grid-cols-2 gap-2.5 sm:gap-3 stagger-children">
               {STYLES.map(s => (
                 <button
                   key={s.value}
