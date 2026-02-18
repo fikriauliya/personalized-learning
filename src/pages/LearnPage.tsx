@@ -35,13 +35,11 @@ export default function LearnPage() {
 
   const selected = nodeId ? findNodeWithPath(store.tree, nodeId) : undefined
 
-  // Generate image on page load for selected node
   useEffect(() => {
     if (!selected) return
     const node = selected.node
     if (node.image || node.imageLoading) return
     if (!node.content) return
-    
     store.setImageLoading(node.id, true)
     const context = node.parentPath.join(' > ')
     generateImage(node.title, context)
@@ -51,19 +49,14 @@ export default function LearnPage() {
 
   async function handleNodeClick(node: SyllabusNode) {
     navigate(`/learn/${node.id}`)
-
-    // If content already loaded, nothing to do
     if (node.content) return
-
     if (store.loading[node.id]) return
     store.setLoading(node.id, true)
     try {
       if (node.layer >= 3) {
-        // Layer 4 (deepest): content only, no subtopics
         const data = await generateSyllabus(node.title, 4, store.rootTopic, node.parentPath, store.narrationStyle)
         store.setContent(node.id, data.content)
       } else {
-        // Layers 0-2: content with inline subtopic links
         const nextLayer = node.layer + 1
         const data = await generateSyllabus(node.title, nextLayer, store.rootTopic, [...node.parentPath, node.title], store.narrationStyle)
         store.setContent(node.id, data.content)
@@ -83,14 +76,10 @@ export default function LearnPage() {
     }
   }
 
-  // Find child node by title (for inline subtopic links)
   function handleSubtopicClick(subtopicTitle: string) {
     if (!selected) return
-    const node = selected.node
-    const child = node.children?.find(c => c.title === subtopicTitle)
-    if (child) {
-      handleNodeClick(child)
-    }
+    const child = selected.node.children?.find(c => c.title === subtopicTitle)
+    if (child) handleNodeClick(child)
   }
 
   const breadcrumbPath = selected
@@ -98,19 +87,24 @@ export default function LearnPage() {
     : [{ title: store.rootTopic, id: '' }]
 
   return (
-    <div className="min-h-screen flex bg-slate-50">
+    <div className="min-h-screen flex bg-surface-dim">
+      {/* Mobile menu button */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="fixed top-3 left-3 z-50 lg:hidden bg-white p-2 rounded-lg shadow-md"
+        className="fixed top-4 left-4 z-50 lg:hidden glass p-2.5 rounded-xl shadow-lg border border-white/50 hover:shadow-xl transition-all duration-300 active:scale-95"
       >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sidebarOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
         </svg>
       </button>
 
-      <div className={`fixed lg:static inset-y-0 left-0 z-40 w-72 bg-white border-r border-slate-200 overflow-y-auto transition-transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
-        <div className="p-4 border-b border-slate-200">
-          <Link to="/" className="text-lg font-semibold text-blue-600 hover:text-blue-700">🎓 New Topic</Link>
+      {/* Sidebar */}
+      <div className={`fixed lg:static inset-y-0 left-0 z-40 w-80 bg-white/95 backdrop-blur-xl border-r border-slate-200/60 overflow-y-auto transition-all duration-500 ease-out ${sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full shadow-none'} lg:translate-x-0 lg:shadow-none`}>
+        <div className="p-5 border-b border-slate-100">
+          <Link to="/" className="flex items-center gap-2.5 group">
+            <span className="text-xl group-hover:scale-110 transition-transform duration-300">🎓</span>
+            <span className="text-lg font-bold bg-gradient-to-r from-brand-700 to-brand-500 bg-clip-text text-transparent font-display">Lumina</span>
+          </Link>
         </div>
         <Sidebar
           nodes={store.tree}
@@ -120,23 +114,35 @@ export default function LearnPage() {
         />
       </div>
 
-      {sidebarOpen && <div className="fixed inset-0 bg-black/30 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />}
+      {/* Overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 lg:hidden animate-fade-in"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
+      {/* Main content */}
       <div className="flex-1 min-w-0">
-        <div className="max-w-4xl mx-auto p-4 lg:p-8 pt-14 lg:pt-8">
+        <div className="max-w-4xl mx-auto px-5 lg:px-10 py-6 lg:py-10 pt-16 lg:pt-10">
           <Breadcrumb items={breadcrumbPath} onNavigate={(id) => id ? navigate(`/learn/${id}`) : navigate('/learn')} />
 
-          {selected ? (
-            <ContentView
-              node={selected.node}
-              loading={!!store.loading[selected.node.id]}
-              error={store.error[selected.node.id]}
-              onChildClick={handleNodeClick}
-              onSubtopicClick={handleSubtopicClick}
-            />
-          ) : (
-            <p className="text-slate-500">Select a topic from the sidebar</p>
-          )}
+          <div className="animate-fade-in-up">
+            {selected ? (
+              <ContentView
+                node={selected.node}
+                loading={!!store.loading[selected.node.id]}
+                error={store.error[selected.node.id]}
+                onChildClick={handleNodeClick}
+                onSubtopicClick={handleSubtopicClick}
+              />
+            ) : (
+              <div className="text-center py-20 text-slate-400">
+                <span className="text-4xl mb-4 block">📖</span>
+                <p>Select a topic from the sidebar to begin</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

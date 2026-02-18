@@ -9,6 +9,18 @@ interface Props {
   depth?: number
 }
 
+function LayerDot({ layer }: { layer: number }) {
+  const colors = [
+    'bg-brand-500',
+    'bg-emerald-500',
+    'bg-amber-500',
+    'bg-purple-500',
+  ]
+  return (
+    <span className={`w-1.5 h-1.5 rounded-full ${colors[layer] || colors[0]} flex-shrink-0 opacity-70`} />
+  )
+}
+
 function SidebarItem({ node, selectedId, loading, onNodeClick, depth = 0 }: Props & { node: SyllabusNode; depth: number }) {
   const [expanded, setExpanded] = useState(true)
   const isSelected = node.id === selectedId
@@ -17,31 +29,42 @@ function SidebarItem({ node, selectedId, loading, onNodeClick, depth = 0 }: Prop
   return (
     <div>
       <div
-        className={`flex items-center gap-1 py-1.5 px-2 cursor-pointer rounded text-sm hover:bg-blue-50 transition ${isSelected ? 'bg-blue-100 text-blue-700 font-medium' : 'text-slate-700'}`}
-        style={{ paddingLeft: `${depth * 16 + 8}px` }}
+        className={`group flex items-center gap-2 py-2 px-3 cursor-pointer rounded-xl text-sm transition-all duration-200 mx-2 my-0.5 ${
+          isSelected
+            ? 'bg-gradient-to-r from-brand-50 to-brand-100/50 text-brand-700 font-semibold shadow-sm border border-brand-200/50'
+            : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800'
+        }`}
+        style={{ paddingLeft: `${depth * 16 + 12}px` }}
         onClick={() => onNodeClick(node)}
       >
-        {hasChildren && (
+        {hasChildren ? (
           <button
             onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }}
-            className="w-4 h-4 flex-shrink-0 text-slate-400 hover:text-slate-600"
+            className="w-4 h-4 flex-shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
           >
-            <svg className={`w-3 h-3 transition-transform ${expanded ? 'rotate-90' : ''}`} fill="currentColor" viewBox="0 0 20 20">
+            <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${expanded ? 'rotate-90' : ''}`} fill="currentColor" viewBox="0 0 20 20">
               <path d="M6 4l8 6-8 6V4z"/>
             </svg>
           </button>
+        ) : (
+          <LayerDot layer={node.layer} />
         )}
-        {!hasChildren && <span className="w-4 flex-shrink-0" />}
         <span className="truncate">{node.title}</span>
         {loading[node.id] && (
-          <svg className="animate-spin h-3 w-3 text-blue-500 ml-auto flex-shrink-0" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-          </svg>
+          <div className="ml-auto flex-shrink-0">
+            <svg className="animate-spin h-3.5 w-3.5 text-brand-500" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+          </div>
+        )}
+        {isSelected && !loading[node.id] && (
+          <div className="ml-auto w-1.5 h-1.5 rounded-full bg-brand-500 flex-shrink-0" />
         )}
       </div>
       {hasChildren && expanded && (
-        <div>
+        <div className="relative">
+          <div className="absolute left-0 top-0 bottom-0 border-l border-slate-200/60" style={{ marginLeft: `${depth * 16 + 22}px` }} />
           {node.children!.map(child => (
             <SidebarItem key={child.id} node={child} nodes={[]} selectedId={selectedId} loading={loading} onNodeClick={onNodeClick} depth={depth + 1} />
           ))}
@@ -53,7 +76,7 @@ function SidebarItem({ node, selectedId, loading, onNodeClick, depth = 0 }: Prop
 
 export default function Sidebar({ nodes, selectedId, loading, onNodeClick }: Props) {
   return (
-    <div className="py-2">
+    <div className="py-3">
       {nodes.map(node => (
         <SidebarItem key={node.id} node={node} nodes={nodes} selectedId={selectedId} loading={loading} onNodeClick={onNodeClick} depth={0} />
       ))}

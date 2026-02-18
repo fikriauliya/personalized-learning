@@ -77,8 +77,31 @@ No wrapping markdown code blocks, just raw JSON.`
     const geminiData = await geminiRes.json()
     const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || ''
     
-    const jsonMatch = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-    const parsed = JSON.parse(jsonMatch)
+    // Strip markdown code fences
+    let cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
+    
+    // Escape control characters inside JSON string values before parsing.
+    // This handles newlines, tabs, and other control chars that Gemini
+    // sometimes includes raw inside JSON string literals.
+    cleaned = cleaned.replace(/[\x00-\x1f\x7f]/g, (ch: string) => {
+      switch (ch) {
+        case '\n': return '\\n'
+        case '\r': return '\\r'
+        case '\t': return '\\t'
+        default: return ''
+      }
+    })
+
+    let parsed: any
+    try {
+      parsed = JSON.parse(cleaned)
+    } catch (parseErr: any) {
+      console.error('JSON parse failed. Cleaned text:', cleaned.slice(0, 500))
+      return new Response(
+        JSON.stringify({ error: 'Failed to parse AI response. Please try again.' }),
+        { status: 502, headers: { 'Content-Type': 'application/json' } }
+      )
+    }
 
     return new Response(JSON.stringify(parsed), {
       headers: { 'Content-Type': 'application/json' }
